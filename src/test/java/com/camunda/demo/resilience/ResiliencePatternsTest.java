@@ -94,60 +94,6 @@ public class ResiliencePatternsTest {
     assertEquals(1, ServiceB.countSuccess);
   }
   
-
-  @Test
-  @Deployment(resources = "models/async-retry-2.bpmn")
-  public void testASyncRetrySuspend() {
-    ServiceA.fail = false;   
-    ServiceA.countSuccess=0;
-    ServiceB.fail = false;    
-    ServiceB.countSuccess=0;
-    
-    ProcessInstance processInstance = 
-        processEngine().getRuntimeService().startProcessInstanceByKey("async-retry-2");
-    
-    assertThat(processInstance).isWaitingAt("SendTask_A");
-    assertTrue(executeNextJob(processInstance));
-    
-    assertThat(processInstance).isWaitingAt("ReceiveTask");
-    // now we do NOT send an answer but trigger first retry
-    
-    // But before we suspend all jobs containing "_A" in the corresponding ActivityId (in BPMN
-    String SYSTEM_TO_SUSPEND = "_A";
-    
-    processEngine().getManagementService().createJobDefinitionQuery().list() //
-      .stream()
-      .filter(jobDef -> jobDef.getActivityId().contains(SYSTEM_TO_SUSPEND))
-      .forEach(jobDef -> {
-        
-        // suspend, including already existing jobs
-        processEngine().getManagementService().suspendJobDefinitionById(jobDef.getId(), true);
-        
-      });
-
-    // Move the process back to retrying / the SendTask
-    assertTrue(executeNextJob(processInstance));
-    assertThat(processInstance).isWaitingAt("SendTask_A");
-
-    // now the job es suspended, meaning it will NOT be executed, but we keep being in the Send Task waiting
-    assertFalse(executeNextJob(processInstance));
-    assertThat(processInstance).isWaitingAt("SendTask_A");
-
-    // now we can resume the job definition
-    processEngine().getManagementService().createJobDefinitionQuery().list() //
-    .stream()
-    .filter(s -> s.getActivityId().contains(SYSTEM_TO_SUSPEND))
-    .forEach(jobDef -> {
-      
-      // resume/activate, including already existing jobs
-      processEngine().getManagementService().activateJobDefinitionById(jobDef.getId(), true);
-      
-    });
-
-    // now it will move again
-    assertTrue(executeNextJob(processInstance));
-    assertThat(processInstance).isWaitingAt("ReceiveTask");    
-  }
   
   @Test
   @Deployment(resources = "models/async-retry-1.bpmn")
@@ -206,6 +152,56 @@ public class ResiliencePatternsTest {
       Context.removeJobExecutorContext();
     }
     return true;
+  }
+
+  @Test
+  @Deployment(resources = "models/async-retry-2.bpmn")
+  public void testASyncRetrySuspend() {    
+    ProcessInstance processInstance = 
+        processEngine().getRuntimeService().startProcessInstanceByKey("async-retry-2");
+    
+    assertThat(processInstance).isWaitingAt("SendTask_A");
+    assertTrue(executeNextJob(processInstance));
+    
+    assertThat(processInstance).isWaitingAt("ReceiveTask");
+    
+    // Now we suspend all jobs containing "_A" in the corresponding ActivityId (in BPMN
+    String SYSTEM_TO_SUSPEND = "_A";
+    
+    processEngine().getManagementService().createJobDefinitionQuery().list() //
+      .stream()
+      .filter(jobDef -> jobDef.getActivityId().contains(SYSTEM_TO_SUSPEND))
+      .forEach(jobDef -> {
+        
+        // suspend, including already existing jobs
+        processEngine().getManagementService().suspendJobDefinitionById(jobDef.getId(), true);
+        
+      });
+
+    // now let's receive the message and go back in the loop
+    processEngine().getRuntimeService().createMessageCorrelation("RESPONSE_A") //
+      .processInstanceId(processInstance.getId()) //
+      .correlateWithResult();
+
+    assertThat(processInstance).isWaitingAt("SendTask_A");
+    // now the job es suspended, meaning it will NOT be executed, but we keep being in the Send Task waiting
+    assertFalse(executeNextJob(processInstance));
+    assertThat(processInstance).isWaitingAt("SendTask_A");
+
+    // now we can resume the job definition
+    processEngine().getManagementService().createJobDefinitionQuery().list() //
+    .stream()
+    .filter(s -> s.getActivityId().contains(SYSTEM_TO_SUSPEND))
+    .forEach(jobDef -> {
+      
+      // resume/activate, including already existing jobs
+      processEngine().getManagementService().activateJobDefinitionById(jobDef.getId(), true);
+      
+    });
+
+    // now it will move again
+    assertTrue(executeNextJob(processInstance));
+    assertThat(processInstance).isWaitingAt("ReceiveTask");    
   }
 
 }
