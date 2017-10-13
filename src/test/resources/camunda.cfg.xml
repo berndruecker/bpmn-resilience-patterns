@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans" 
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans   http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="processEngineConfiguration" class="org.camunda.bpm.extension.process_test_coverage.junit.rules.ProcessCoverageInMemProcessEngineConfiguration">
+	<property name="customPostBPMNParseListeners">
+	  <list>
+		<bean class="org.camunda.bpm.engine.impl.bpmn.parser.FoxFailedJobParseListener" />
+	  </list>
+	</property>  
+    <property name="history" value="full" />
+    <property name="failedJobCommandFactory">
+    	<bean class="org.camunda.bpm.engine.impl.jobexecutor.FoxFailedJobCommandFactory" />
+    </property>
+    <property name="expressionManager">
+        <bean class="org.camunda.bpm.engine.test.mock.MockExpressionManager"/>
+    </property>
+    <property name="processEnginePlugins">
+      <list>
+      </list>
+    </property>
+  </bean>
+
+</beans>

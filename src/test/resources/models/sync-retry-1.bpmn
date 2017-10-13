@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="1.9.0">
+  <bpmn:process id="sync-retry-1" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1esp5s5">
+      <bpmn:outgoing>SequenceFlow_09szziz</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="ExclusiveGateway_1niupoh">
+      <bpmn:incoming>SequenceFlow_0zgv55x</bpmn:incoming>
+      <bpmn:incoming>SequenceFlow_1iz5i02</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0x730wz</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_1qm21fc">
+      <bpmn:incoming>SequenceFlow_0x730wz</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="ServiceTask_A" name="Service A" camunda:asyncBefore="true" camunda:class="com.camunda.demo.resilience.GuardedServiceA">
+      <bpmn:extensionElements>
+        <camunda:failedJobRetryTimeCycle>R2/PT30S</camunda:failedJobRetryTimeCycle>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_09szziz</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0zgv55x</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SequenceFlow_09szziz" sourceRef="StartEvent_1esp5s5" targetRef="ServiceTask_A" />
+    <bpmn:sequenceFlow id="SequenceFlow_0zgv55x" sourceRef="ServiceTask_A" targetRef="ExclusiveGateway_1niupoh" />
+    <bpmn:sequenceFlow id="SequenceFlow_1iz5i02" sourceRef="ServiceTask_B" targetRef="ExclusiveGateway_1niupoh" />
+    <bpmn:sequenceFlow id="SequenceFlow_0x730wz" sourceRef="ExclusiveGateway_1niupoh" targetRef="EndEvent_1qm21fc" />
+    <bpmn:sequenceFlow id="SequenceFlow_0ml9rlo" sourceRef="BoundaryEvent_04k9pzc" targetRef="ServiceTask_B" />
+    <bpmn:serviceTask id="ServiceTask_B" name="Service B" camunda:class="com.camunda.demo.resilience.ServiceB">
+      <bpmn:incoming>SequenceFlow_0ml9rlo</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1iz5i02</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="BoundaryEvent_04k9pzc" name="no retries left" attachedToRef="ServiceTask_A">
+      <bpmn:outgoing>SequenceFlow_0ml9rlo</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_0cwq7j3" />
+    </bpmn:boundaryEvent>
+  </bpmn:process>
+  <bpmn:error id="Error_0cwq7j3" name="NO_RETRIES" errorCode="NO_RETRIES" />
+  <bpmn:message id="Message_1w3kkvj" name="MESSAGE_FAILED_JOB" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="sync-retry-1">
+      <bpmndi:BPMNShape id="StartEvent_1esp5s5_di" bpmnElement="StartEvent_1esp5s5">
+        <dc:Bounds x="40" y="38" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="13" y="74" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ExclusiveGateway_1niupoh_di" bpmnElement="ExclusiveGateway_1niupoh" isMarkerVisible="true">
+        <dc:Bounds x="394" y="31" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="374" y="85" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1qm21fc_di" bpmnElement="EndEvent_1qm21fc">
+        <dc:Bounds x="474" y="38" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="447" y="78" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_1rej6iw_di" bpmnElement="ServiceTask_A">
+        <dc:Bounds x="133" y="16" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_09szziz_di" bpmnElement="SequenceFlow_09szziz">
+        <di:waypoint xsi:type="dc:Point" x="76" y="56" />
+        <di:waypoint xsi:type="dc:Point" x="133" y="56" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="60.5" y="35" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0zgv55x_di" bpmnElement="SequenceFlow_0zgv55x">
+        <di:waypoint xsi:type="dc:Point" x="233" y="56" />
+        <di:waypoint xsi:type="dc:Point" x="394" y="56" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="269.5" y="35" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1iz5i02_di" bpmnElement="SequenceFlow_1iz5i02">
+        <di:waypoint xsi:type="dc:Point" x="357" y="151" />
+        <di:waypoint xsi:type="dc:Point" x="419" y="151" />
+        <di:waypoint xsi:type="dc:Point" x="419" y="81" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="388" y="130" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0x730wz_di" bpmnElement="SequenceFlow_0x730wz">
+        <di:waypoint xsi:type="dc:Point" x="444" y="56" />
+        <di:waypoint xsi:type="dc:Point" x="474" y="56" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="414" y="35" width="0" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0ml9rlo_di" bpmnElement="SequenceFlow_0ml9rlo">
+        <di:waypoint xsi:type="dc:Point" x="204" y="114" />
+        <di:waypoint xsi:type="dc:Point" x="204" y="151" />
+        <di:waypoint xsi:type="dc:Point" x="257" y="151" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="174" y="126.5" width="90" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="ServiceTask_0y1rd5u_di" bpmnElement="ServiceTask_B">
+        <dc:Bounds x="257" y="111" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryEvent_05yldst_di" bpmnElement="BoundaryEvent_04k9pzc">
+        <dc:Bounds x="186" y="78" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="127" y="108" width="64" height="12" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
