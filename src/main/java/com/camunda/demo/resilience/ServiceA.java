@@ -19,4 +19,15 @@ public class ServiceA implements JavaDelegate {
     System.out.println(ctx.getCurrentActivityId());
   }
 
+  public static void initFailing() {
+    fail = true;    
+    countSuccess = 0;
+    countFailed = 0;
+  }
+  public static void initNotFailing() {
+    fail = false;    
+    countSuccess = 0;
+    countFailed = 0;
+  }
+
 }

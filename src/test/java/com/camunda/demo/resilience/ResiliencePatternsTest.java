@@ -1,6 +1,5 @@
 package com.camunda.demo.resilience;
 
-import static org.assertj.core.api.Assertions.fail;
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineAssertions.assertThat;
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineAssertions.init;
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineAssertions.processEngine;
@@ -20,7 +19,6 @@ import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
 import org.camunda.bpm.extension.process_test_coverage.junit.rules.TestCoverageProcessEngineRuleBuilder;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -42,12 +40,9 @@ public class ResiliencePatternsTest {
   @Test
   @Deployment(resources = "models/sync-retry-1.bpmn")
   public void testSyncRetryFallback() {
-    GuardedServiceA.fail = true;	  
-    com.camunda.demo.resilience.GuardedServiceA.countFailed=0;
-    ServiceB.fail = false;    
-    ServiceB.countSuccess=0;
+    GuardedServiceA.initFailing();    
+    ServiceB.initNotFailing();
 
-    // wait for https://forum.camunda.org/t/fallback-on-other-path-in-bpmn-when-no-retries-are-left/5019
 	  ProcessInstance processInstance = 
 	      processEngine().getRuntimeService().startProcessInstanceByKey("sync-retry-1");	 
 
@@ -71,10 +66,8 @@ public class ResiliencePatternsTest {
   @Test
   @Deployment(resources = "models/sync-retry-2.bpmn")
   public void testSyncRetryFallbackModeled() {
-    ServiceA.fail = true;   
-    ServiceA.countFailed=0;
-    ServiceB.fail = false;    
-    ServiceB.countSuccess=0;
+    ServiceA.initFailing();
+    ServiceB.initNotFailing();
     
     ProcessInstance processInstance = 
         processEngine().getRuntimeService().startProcessInstanceByKey("sync-retry-2");
@@ -98,10 +91,8 @@ public class ResiliencePatternsTest {
   @Test
   @Deployment(resources = "models/async-retry-1.bpmn")
   public void testASyncRetryFallback() {
-    ServiceA.fail = false;   
-    ServiceA.countSuccess=0;
-    ServiceB.fail = false;    
-    ServiceB.countSuccess=0;
+    ServiceA.initNotFailing();
+    ServiceB.initNotFailing();
     
     ProcessInstance processInstance = 
         processEngine().getRuntimeService().startProcessInstanceByKey("async-retry-1");
@@ -204,4 +195,57 @@ public class ResiliencePatternsTest {
     assertThat(processInstance).isWaitingAt("ReceiveTask");    
   }
 
+  @Test
+  @Deployment(resources = "models/sync-compensation.bpmn")
+  public void testCompensationA() {
+    GuardedServiceA.initNotFailing();
+    ServiceB.initNotFailing();
+    ServiceC.initFailing();
+
+    ProcessInstance processInstance = 
+        processEngine().getRuntimeService().startProcessInstanceByKey("sync-compensation");   
+
+    // Service A
+    assertTrue(executeNextJob(processInstance));
+    assertEquals(1, GuardedServiceA.countSuccess);
+    assertEquals(0, ServiceC.countFailed);
+    
+    // Service C
+    assertTrue(executeNextJob(processInstance));
+
+    // so no more executable jobs
+    assertFalse(executeNextJob(processInstance));
+
+    // compensation was done - for the sake of simplicity the same service will be just called again
+    assertEquals(1, ServiceC.countFailed);
+    assertEquals(2, GuardedServiceA.countSuccess);      
+  }
+
+  @Test
+  @Deployment(resources = "models/sync-compensation.bpmn")
+  public void testCompensationB() {
+    GuardedServiceA.initFailing();
+    ServiceB.initNotFailing();
+    ServiceC.initFailing();
+
+    ProcessInstance processInstance = 
+        processEngine().getRuntimeService().startProcessInstanceByKey("sync-compensation");   
+
+    // Service A fails, retry, Service B will be executed
+    assertTrue(executeNextJob(processInstance));
+    assertTrue(executeNextJob(processInstance));
+    
+    assertEquals(2, GuardedServiceA.countFailed);
+    assertEquals(1, ServiceB.countSuccess);
+    
+    // Service C
+    assertTrue(executeNextJob(processInstance));
+
+    // so no more executable jobs
+    assertFalse(executeNextJob(processInstance));
+
+    // compensation was done - for the sake of simplicity the same service will be just called again
+    assertEquals(1, ServiceC.countFailed);
+    assertEquals(2, ServiceB.countSuccess);      
+  }
 }

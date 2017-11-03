@@ -18,6 +18,10 @@ This project shows some possibilities to model and execute resilient workflows u
 
 ![AsyncScenario2](src/test/resources/models/async-retry-2.png)
 
+## Compensation
+
+![Compensation](src/test/resources/models/sync-compensation.png)
+
 ## How to use and understand
 
 Goto the Test case [ResiliencePatternsTest.java](src/test/java/com/camunda/demo/resilience/ResiliencePatternsTest.java) and inspect the different test scenarios. You can run it directly from your IDE.

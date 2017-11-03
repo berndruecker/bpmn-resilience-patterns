@@ -3,7 +3,7 @@ package com.camunda.demo.resilience;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
 
-public class ServiceB implements JavaDelegate {
+public class ServiceC implements JavaDelegate {
 
   public static boolean fail = false;
   public static int countFailed = 0;
@@ -13,7 +13,7 @@ public class ServiceB implements JavaDelegate {
   public void execute(DelegateExecution ctx) throws Exception {
     if (fail) {
       countFailed++;
-      throw new RuntimeException("ServiceB fails as expected");
+      throw new RuntimeException("ServiceC fails as expected");
     }
     countSuccess++;
     System.out.println(ctx.getCurrentActivityId());
