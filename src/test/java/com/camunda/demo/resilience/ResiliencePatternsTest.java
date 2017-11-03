@@ -116,34 +116,6 @@ public class ResiliencePatternsTest {
     assertEquals(1, ServiceB.countSuccess);
  
   }
-  
-  private boolean executeNextJob(ProcessInstance pi) {
-    long count = processEngine().getManagementService().createJobQuery() //
-        .processInstanceId(pi.getId()) //
-        .withRetriesLeft() // do not query for executable to get timers in the future as well
-        .active() // do not take suspended jobs into account (same as real Job Executor)
-        .count();
-    if (count==0) {
-      return false;
-    }
-    
-    Job job = processEngine().getManagementService().createJobQuery() //
-        .processInstanceId(pi.getId()) //
-        .withRetriesLeft() //
-        .active() // do not take suspended jobs into account (same as real Job Executor)
-        .list().get(0);
-    
-    CommandExecutor commandExecutor = ((ProcessEngineImpl) processEngine()).getProcessEngineConfiguration().getCommandExecutorTxRequired();
-    try {
-      Context.setJobExecutorContext(new JobExecutorContext());
-      ExecuteJobHelper.executeJob(job.getId(), commandExecutor);
-    }
-    catch (RuntimeException ex) {}
-    finally {
-      Context.removeJobExecutorContext();
-    }
-    return true;
-  }
 
   @Test
   @Deployment(resources = "models/async-retry-2.bpmn")
@@ -247,5 +219,34 @@ public class ResiliencePatternsTest {
     // compensation was done - for the sake of simplicity the same service will be just called again
     assertEquals(1, ServiceC.countFailed);
     assertEquals(2, ServiceB.countSuccess);      
+  }
+  
+  private boolean executeNextJob(ProcessInstance pi) {
+    long count = processEngine().getManagementService().createJobQuery() //
+        .processInstanceId(pi.getId()) //
+        .withRetriesLeft() // do not query for executable to get timers in the future as well
+        .active() // do not take suspended jobs into account (same as real Job Executor)
+        .count();
+    if (count==0) {
+      return false;
+    }
+    
+    Job job = processEngine().getManagementService().createJobQuery() //
+        .processInstanceId(pi.getId()) //
+        .withRetriesLeft() //
+        .active() // do not take suspended jobs into account (same as real Job Executor)
+        .list().get(0);
+    
+    // Emulate real job executor environment to make the GuardedServiceA work
+    CommandExecutor commandExecutor = ((ProcessEngineImpl) processEngine()).getProcessEngineConfiguration().getCommandExecutorTxRequired();
+    try {
+      Context.setJobExecutorContext(new JobExecutorContext());
+      ExecuteJobHelper.executeJob(job.getId(), commandExecutor);
+    }
+    catch (RuntimeException ex) {}
+    finally {
+      Context.removeJobExecutorContext();
+    }
+    return true;
   }
 }
